@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha2
+version: alpha3
 author: w00zla
 
 file: player/cmd/findstation.lua
@@ -14,50 +14,61 @@ if onServer() then -- make this script run server-side only
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-require "stringutility"
 require "utility"
+require "stringutility"
 
-require "cmd.findstationcommon"
-require "cmd.findstationxml"
+require "findstation.common"
+
+Config = require("findstation.config")
+SectorsSearch = require("findstation.sectorssearch")
 
 
--- constants / defaults
-local default_framesectorchecks = 2000
-local default_framesectorloads = 10
-local default_maxchatresults = 18 
-
--- configs
-local galaxypath
-local framesectorchecks
-local framesectorloads
-local maxchatresults
+-- config
+local myconfig
 
 -- runtime vars
-local searchterm
-local resultsByDistance
-local resultscount
 local dosearch
 local searching
-local sectorError
-local lastX
-local lastY
-
--- diag vars
-local startTime
-local readTime
-local total_sectorchecks
-local total_sectorloads
-local total_frames
+local secsearch
+local abortsearch
 
 
 function initialize()
-
-	-- init static settings
-	maxchatresults = default_maxchatresults
 	
 	-- subscribe for callbacks
 	Player():registerCallback("onSectorLeft", "onSectorLeft")
 
+end
+
+
+function onSectorLeft(playerIndex, x, y) 
+
+	if searching then
+		print("SCRIPT findstation => cancelled search due to player jumping")
+		Player():sendChatMessage("findstation", 0, "Search cancelled (player left sector)!")
+		abortsearch = true
+	end
+
+end
+
+
+function getConfig()
+
+	local cfg = {
+		galaxypath = Config.loadValue("galaxypath"),
+		framesectorchecks = tonumber(Config.loadValue("framesectorchecks")),
+		framesectorloads = tonumber(Config.loadValue("framesectorloads")),
+		maxchatresults = tonumber(Config.loadValue("maxchatresults")),
+		maxresults = tonumber(Config.loadValue("maxresults"))
+	}
+
+	if not cfg.galaxypath or cfg.galaxypath == "" then
+		print("SCRIPT findstation => ERROR -> no galaxypath configured!")
+		player:sendChatMessage("findstation", 0, "No galaxy or galaxypath configured. Execute command /findstationconfig first!")
+		return
+	end
+	
+	return cfg
 end
 
 
@@ -73,47 +84,30 @@ function executeSearch(term)
 	end
 	dosearch = false
 	
-	-- get basic config
-	galaxypath = loadConfigValue("galaxypath")
-	if not galaxypath or galaxypath == "" then
-		print("SCRIPT findstation => ERROR -> no galaxypath configured!")
-		player:sendChatMessage("findstation", 0, "No galaxy or galaxypath configured. Execute command /findstationconfig first!")
-		return
-	end
-	
-	-- get additional config
-	framesectorchecks = tonumber(loadConfigValue("framesectorchecks", default_framesectorchecks))
-	framesectorloads = tonumber(loadConfigValue("framesectorloads", default_framesectorloads))
-	
-	-- feedback for start of search
-	searchterm = term
-	startTime = systemTimeMs()
-	print(string.format("SCRIPT findstation => START SEARCH -> searchterm: %s | framesectorchecks: %s | framesectorloads: %s | galaxypath: %s", searchterm, framesectorchecks, framesectorloads, galaxypath))
-	player:sendChatMessage("findstation", 0, string.format("Searching for '%s' in known stations...", searchterm))
+	-- get current configuration 
+	myconfig = getConfig()
+	if not myconfig then return end
 
-	-- reset runtime and diagnostic vars
-	resultscount = 0
-	resultsByDistance = {}
+	-- init start of search
+	print(string.format("SCRIPT findstation => START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | sectorchecks: %s | galaxypath: %s",
+			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.framesectorchecks, myconfig.galaxypath))
+	player:sendChatMessage("findstation", 0, string.format("Searching for '%s' in known stations...", term))
 	
-	total_sectorchecks = 0
-	total_sectorloads = 0
-	total_frames = 0
-	readTime = 0
+	secsearch = SectorsSearch(myconfig.galaxypath)
+	--secsearch:initBTBatchProcessing(term, myconfig.framesectorchecks, myconfig.framesectorloads)
 	
-	-- trigger start of search
+	local sectors = getExistingSectors(myconfig.galaxypath)
+	--print("DEBUG findstation => sectors table:")
+	--printTable(sectors)
+	
+	local startx, starty = Sector():getCoordinates()
+	local startsector = { x=startx, y=starty }
+	
+	secsearch:initBatchProcessing(term, sectors, myconfig.framesectorloads, myconfig.maxresults, startsector)
+	
 	dosearch = true
+	abortsearch = false
 	
-end
-
-
-function onSectorLeft(playerIndex, x, y) 
-
-	if searching then
-		print("SCRIPT findstation => cancelled search due to player jumping")
-		Player():sendChatMessage("findstation", 0, "Search cancelled (player left sector)!")
-		sectorError = true
-	end
-
 end
 
 
@@ -123,138 +117,55 @@ function updateServer(timeStep)
 	if not dosearch then return end	
 	searching = true
 	
-	total_frames = total_frames + 1
-	local sectorchecks_last = total_sectorchecks
-	local sectorloads_last = total_sectorloads
+	if not abortsearch then
 	
-	-- do simple "bottom-top" search through all possible sectors
-	local x = -499
-	if lastX then x = lastX	
-	else lastX = x end
-	local y = -499
-	if lastY then y = lastY	
-	else lastY = y end
-
-	-- start/continue processing sectors from initial/last state
-	while x <= 500 do
-	
-		processSector(x, y)
-		if sectorError then break end
+		-- search in batch of sectors per frame
+		--local res = secsearch:continueBatchProcessing()
+		local res = secsearch:continueBatchProcessing()
 		
-		if y < 500 then
-			y = y + 1
-			lastY = y
-		else
-			y = -499
-			lastY = nil
-			x = x + 1
-			lastX = x	
+		if res == false then
+			-- batch finished 
+			return
+		elseif res == nil then
+			-- error
+			print(string.format("SCRIPT findstation => ERROR while processing sectors -> %s", secsearch.error))
+			Player():sendChatMessage("findstation", 0, "Error: %s", secsearch.error)
+			abortsearch = true
 		end
+		
+	end
 	
-		-- defer processing to next frame if any per-frame limit hits
-		if (total_sectorchecks - sectorchecks_last) >= framesectorchecks then return end
-		if (total_sectorloads - sectorloads_last) >= framesectorloads then return end
-	end	
-
-	-- reset search states
-	lastX = nil
-	lastY = nil
 	dosearch = false
 	searching = false
-	
+
 	-- show results and do final cleanup
 	finishSearch()	
-end
-
-
-function processSector(x, y)
-
-	total_sectorchecks = total_sectorchecks + 1
-	--print(string.format("DEBUG findstation => checked sector (%s:%s)", x, y))
-	
-	if Galaxy():sectorExists(x, y) then
-	
-		-- read sector file and search its XML for term
-		total_sectorloads = total_sectorloads + 1	
-		local numresults = searchSectorFile(x, y)
-		--print(string.format("DEBUG findstation => loaded sector (%s:%s) -> results: %s", x, y, numresults))
-		
-		if numresults then
-			resultscount = resultscount + numresults	
-			return numresults
-		else
-			return 0
-		end
-	end
-
-end
-
-
-function searchSectorFile(x, y)
-		
-	-- read sector file from disk and parse its XML
-	local sectorFile = string.format("%s_%sv", x, y)
-	local sectorFilePath = galaxypath .. "sectors\\" .. sectorFile
-	
-	--print(string.format("DEBUG findstation => sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath))
-	local startRead = systemTimeMs()
-	local sectorXml = readSectorFile(sectorFilePath)
-	readTime = readTime + (systemTimeMs() - startRead)
-	
-	if not sectorXml then
-		print(string.format("SCRIPT findstation => ERROR -> could not open or parse XML file for sector (%s:%s)", x, y))
-		Player():sendChatMessage("findstation", 0, "Error: could not read file for sector \\s(%s:%s)! Is configured galaxy/galaxypath correct?", x, y)
-		sectorError = true
-		return 
-	end
-	
-	-- search XML for stations with given term in title
-	local results = searchSectorStations(sectorXml, searchterm)
-	
-	-- save results based on distance and coordinates
-	if results and #results > 0 then	
-		local coords = string.format("(%i:%i)", x, y) 
-		local dist = getCurrentCoordsDistance(x, y)
-		if not resultsByDistance[dist] then
-			resultsByDistance[dist] = {}
-		end
-		resultsByDistance[dist][coords] = results
-		
-		return #results
-	end
 	
 end
 
 
 function finishSearch()
 		
-	local passedTime = systemTimeMs() - startTime	
+	local passedTime = secsearch.endTime - secsearch.startTime	
 	
-	if sectorError then
+	if abortsearch then
 		-- error while reading sector files
-		print(string.format("SCRIPT findstation => SEARCH ABORTED (%s ms, frames %s, loads %s, checks %s, xml %s ms)", passedTime, total_frames, total_sectorloads, total_sectorchecks, readTime))
+		print(string.format("SCRIPT findstation => SEARCH ABORTED (%s ms, frames %s, loads %s, checks %s, xml %s ms)", 
+				passedTime, secsearch.total_batches, secsearch.total_sectorloads, secsearch.total_sectorchecks, secsearch.readTime))
 	else
 		local player = Player()
 		-- success, show results by distance
-		showResults(player, resultsByDistance)
+		showResults(player, secsearch.resultsByDistance)
 		
-		print(string.format("SCRIPT findstation => END SEARCH (%s results, %s ms, %s frames, %s loads, %s checks, read %s ms)", resultscount, passedTime, total_frames, total_sectorloads, total_sectorchecks, readTime))
-		--player:sendChatMessage("findstation", 0, string.format("Search done (%d results, %d ms, %d frames, %d loads, %d checks, read %d ms)", resultscount, passedTime, total_frames, total_sectorloads, total_sectorchecks, readTime))
+		print(string.format("SCRIPT findstation => END SEARCH (%s results, %s ms, %s frames, %s loads, %s checks, read %s ms)", 
+				secsearch.resultsCount, passedTime, secsearch.total_batches, secsearch.total_sectorloads, secsearch.total_sectorchecks, secsearch.readTime))
+		
 		local passedsecs = passedTime / 1000
-		player:sendChatMessage("findstation", 0, string.format("Search finished (%d results, %.1f seconds)", resultscount, passedsecs))
+		player:sendChatMessage("findstation", 0, string.format("Search finished (%d results, %.1f seconds)", secsearch.resultsCount, passedsecs))
 	end
 	
-	-- clear all search related variables
-	startTime = nil
-	readTime = nil
-	total_sectorchecks = nil
-	total_sectorloads = nil
-	total_frames = nil
-	searchterm = nil
-	resultsByDistance = nil
-	resultscount = nil
-	sectorError = nil
-	
+	-- remove the script from the entity
+	terminate()
 end
 
 
@@ -266,15 +177,15 @@ function showResults(player, resultsByDistance)
 		for c, v2 in pairs(v1) do
 			for _, v3 in pairs(v2) do
 				player:sendChatMessage("findstation", 0, string.format("- %s \\s%s distance: %i", v3, c, d))
-				if i >= maxchatresults then
+				if i >= myconfig.maxchatresults then
 					break
 				else				
 					i = i + 1
 				end
 			end
-			if i >= maxchatresults then break end
+			if i >= myconfig.maxchatresults then break end
 		end
-		if i >= maxchatresults then break end
+		if i >= myconfig.maxchatresults then break end
 	end
 
 end

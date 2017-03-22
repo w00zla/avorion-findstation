@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha2
+version: alpha3
 author: w00zla
 
 file: commands/findstationconfig.lua
@@ -13,7 +13,8 @@ desc: auto-included script to implement custom command /findstationconfig
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-require "cmd.findstationcommon"
+require "findstation.common"
+Config = require("findstation.config")
 
 
 function execute(sender, commandName, ...)
@@ -63,7 +64,7 @@ function updateConfig(player, configkey, configval)
 	elseif configkey == "galaxypath" then
 		paramtype = "path"
 		valid = validateParameter(configval, paramtype)	
-	elseif configkey == "framesectorchecks" then
+	elseif configkey == "maxresults" then
 		paramtype = "pnum"
 		valid = validateParameter(configval, paramtype)	
 	elseif configkey == "framesectorloads" then
@@ -71,20 +72,20 @@ function updateConfig(player, configkey, configval)
 		valid = validateParameter(configval, paramtype)	
 	else
 		-- unknown config
-		print(string.format("SCRIPT findstation => unknown configuration -> configkey: %s | configval: %s", configkey, configval))
+		print(string.format("SCRIPT findstation => unknown configuration -> key: %s | val: %s", configkey, configval))
 		player:sendChatMessage("findstation", 0, "Error: Unknown configuration '%s'!", configkey)
 		return
 	end
 	
 	if valid then
 		-- valid update -> save config
-		saveConfigValue(configkey, configval)
-		print(string.format("SCRIPT findstation => CONFIG updated -> configkey: %s | configval: %s", configkey, configval))
+		Config.saveValue(configkey, configval)		
+		print(string.format("SCRIPT findstation => CONFIG updated ->key: %s | val: %s", configkey, configval))
 		player:sendChatMessage("findstation", 0, "Configuration updated successfully")
 	else
 		-- invalid value	
 		local paramtypelabel = getParamTypeLabel(paramtype)
-		print(string.format("SCRIPT findstation => invalid config value -> configkey: %s | configval: %s | paramtype: %s", configkey, configval, paramtype))
+		print(string.format("SCRIPT findstation => invalid config value -> key: %s | val: %s | paramtype: %s", configkey, configval, paramtype))
 		player:sendChatMessage("findstation", 0, "Error: %s parameter required for config '%s'!", paramtype, configkey)
 	end
 
@@ -103,8 +104,9 @@ Configuration helper for the /findstation command.
 Usage:
 /findstationconfig galaxy <GALAXYNAME>
 /findstationconfig galaxypath <GALAXYPATH>
-/findstationconfig framesectorchecks <NUMBER>
+/findstationconfig maxresults <NUMBER>
 /findstationconfig framesectorloads <NUMBER>
+
 Parameter:
 <GALAXYNAME> = name of current galaxy
 <GALAXYPATH> = full directory path for galaxy

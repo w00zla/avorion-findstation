@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha2
+version: alpha3
 author: w00zla
 
 file: commands/findstation.lua
@@ -12,7 +12,7 @@ desc: auto-included script to implement custom command /findstation
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-require "cmd.findstationcommon"
+require "findstation.common"
 
 
 local playerscript = "cmd/findstation.lua"

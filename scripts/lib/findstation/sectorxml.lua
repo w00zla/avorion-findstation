@@ -2,11 +2,11 @@
 
 FINDSTATION MOD
 
-version: alpha2
+version: alpha3
 author: w00zla
 
-file: lib/cmd/findstationxml.lua
-desc: library script for /findstation commands
+file: lib/findstation/sectorxml.lua
+desc: library script for findstation commands
 
 ]]--
 
@@ -14,7 +14,6 @@ package.path = package.path .. ";data/scripts/lib/?.lua"
 
 -- include libraries
 require "utility"
-require "stringutility"
 require "xml"
 
 
@@ -23,8 +22,7 @@ function readSectorFile(path)
 
 	local sectorFile, err = io.open(path)
 	if err then
-		print(string.format("SCRIPT findstation => ERROR on opening file '%s': %s'", path, err))
-		return
+		return nil, err
 	end
 	
 	local xmlString = sectorFile:read("*a")
