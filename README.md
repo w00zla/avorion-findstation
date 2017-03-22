@@ -13,7 +13,7 @@ _**The mod stays alpha until sector data is provided by game API!**_
 
 ##  COMMANDS
 
-**/findstationui**   
+### /findstationui  
 Enables/disables the UI *(menu item & window)* for station search.
 
 *Usage:*   
@@ -22,17 +22,16 @@ Enables/disables the UI *(menu item & window)* for station search.
 `/findstationui disable`
 
 
-**/findstation**   
+### /findstation  
 Finds near stations in any of the found/created sectors in the galaxy and displays them in chat-window.
 
 *Usage:*   
-`/findstation <SEARCHTERM>`
-
+`/findstation <SEARCHTERM>`  
 *Parameters:*   
 `<SEARCHTERM>` = term to search in station names *(spaces possible, case-insensitive)*
 
 
-**/findstationconfig**   
+### /findstationconfig  
 Used to set the configuration values for /findstation command.
 
 *Usage:*   
@@ -41,8 +40,7 @@ Used to set the configuration values for /findstation command.
 `/findstationconfig maxresults <NUMBER>`  
 `/findstationconfig framesectorloads <NUMBER>`  
 `/findstationconfig maxconcurrent <NUMBER>`  
-`/findstationconfig searchdelay <NUMBER>`
-
+`/findstationconfig searchdelay <NUMBER>`  
 *Parameters:*  
 `<GALAXYNAME>` = name of current galaxy  
 `<GALAXYPATH>` = full directory path for galaxy  
@@ -93,13 +91,13 @@ If you use the `--datapath` parameter for your server, you must execute `/findst
 ### Performance tweaking:
 If your searches are too slow or performance cost of searches is too high then you can modify some of the configs to tune the behavior (use `/findstationconfig` for this):
 
-__*framesectorloads*__:
+__*framesectorloads*__:   
 - defines the maximum number of searched/loaded sector files per frame (quite like "file reads per frame")
 - higher values mean faster search but more performance cost
 - possible values: 0 - 1000000 *(0 disables the limit)*
 - default: 10
 
-__*maxresults*__:
+__*maxresults*__:   
 - defines after how many found results the search will stop
 - lower values means faster search in some cases, but also gives you less output obviously
 - possible values: 0 - 99999999 *(0 disables the limit)*
@@ -109,12 +107,12 @@ __*maxresults*__:
 ### Advanced server configuration:
 These configs will help server admins to keep impact of searches on server load at a minumum and to prevent flood/spam!
 
-__*maxconcurrent*__:
+__*maxconcurrent*__:   
 - defines the maximum number of concurrent searches, meaning how many players can have a search running at the same time
 - possible values: 0 - 99999999 *(0 disables the limit)*
 - default: 0
 
-__*searchdelay*__:
+__*searchdelay*__:   
 - defines the minimum time (in seconds) a player has to wait before he can start a new search, after each search
 - possible values: 0 - 99999999 *(0 disables the limit)*
 - default: 0
