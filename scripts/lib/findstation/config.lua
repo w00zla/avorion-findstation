@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha4
+version: 0.5alpha
 author: w00zla
 
 file: lib/findstation/config.lua
@@ -18,7 +18,9 @@ local defaults = {
 	framesectorchecks = 2000,
 	framesectorloads = 10,
 	maxresults = 30,
-	maxchatresults = 18
+	maxchatresults = 18,
+	maxconcurrent = 0,
+	searchdelay = 0
 }
 
 
@@ -54,7 +56,9 @@ function Config.getCurrent()
 		framesectorchecks = tonumber(Config.loadValue("framesectorchecks")),
 		framesectorloads = tonumber(Config.loadValue("framesectorloads")),
 		maxchatresults = tonumber(Config.loadValue("maxchatresults")),
-		maxresults = tonumber(Config.loadValue("maxresults"))
+		maxresults = tonumber(Config.loadValue("maxresults")),
+		maxconcurrent = tonumber(Config.loadValue("maxconcurrent")),
+		searchdelay = tonumber(Config.loadValue("searchdelay"))
 	}
 	
 	return cfg

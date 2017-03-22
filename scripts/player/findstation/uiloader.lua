@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha4
+version: 0.5alpha
 author: w00zla
 
 file: player/findstation/uiloader.lua

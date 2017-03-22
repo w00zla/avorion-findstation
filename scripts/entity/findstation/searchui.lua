@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha4
+version: 0.5alpha
 author: w00zla
 
 file: entity/findstation/searchui.lua
@@ -47,10 +47,12 @@ local pagerows = 15
 local myconfig
 local myplayerindex
 local secsearch
+local searchstart
 local dosearch
 local searching
 local abortsearch
 local uierror
+local uiwarn
 local resultsLocal = {}
 
 
@@ -125,6 +127,8 @@ function initUI()
 	
 	buildResultsUI(ctls.pnlResults, pagerows)
 
+	scriptLog(nil, "search UI initialized successfully")
+	
 end
 
 
@@ -245,14 +249,22 @@ function refreshUI(term, resultsSector, resultsByDistance, searchtime)
 end
 
 
-function refreshUIError(term, errmsg)
+function refreshUIInfo(term, msg, msgtype)
 
 	ctls.txtSearchTerm.text = ""
 	ctls.txtSearchTerm.active = true
 	ctls.btnDoSearch.active = true
 
-	ctls.lblInfo.caption = errmsg
-	ctls.lblInfo.color = ColorRGB(1, 0, 0)
+	ctls.lblInfo.caption = msg
+	if msgtype == "error" then
+		ctls.lblInfo.color = ColorRGB(1, 0, 0)
+	elseif msgtype == "warning" then
+		ctls.lblInfo.color = ColorRGB(1, 0.5, 0)
+	else
+		ctls.lblInfo.color = ColorRGB(1, 1, 1)
+	end
+	
+	scriptLog(nil, "SEARCH ABORTED -> term: %s | msg: %s | msgtype: %s", term, msg, msgtype)
 	
 end 
 
@@ -279,6 +291,7 @@ function onDoSearchPressed()
 		ctls.btnDoSearch.active = false
 		ctls.lblInfo.caption = "Searching..."
 		
+		scriptLog(nil, "START SEARCH -> term: %s", term)
 		invokeServerFunction("executeSearch", Player().index, term)
 	
 	else	
@@ -352,7 +365,7 @@ function onSectorChanged()
 
     if searching then
 		scriptLog(Player(), "cancelled search due to player jumping")
-		uierror = "Cancelled search because of jump!"
+		uiwarn = "Cancelled search because of jump!"
 		abortsearch = true	
 	end
 	
@@ -361,37 +374,70 @@ end
 
 function executeSearch(playerindex, term)
 
+	myplayerindex = playerindex
+
 	-- prevent parallel search requests	
 	if searching then
 		scriptLog(Player(), "parallel search execution cancelled")
 		return
 	end
 	dosearch = false
-	
-	myplayerindex = playerindex
-	
+		
 	-- get current configuration 
 	myconfig = Config.getCurrent()
 	if not myconfig.galaxypath or myconfig.galaxypath == "" then
 		scriptLog(Player(), "ERROR -> no galaxypath configured!")
-		invokeClientFunction(Player(myplayerindex), "refreshUIError", term, "Error: no galaxy/galaxypath is configured!")
+		invokeClientFunction(Player(myplayerindex), "refreshUIInfo", term, "Error: no galaxy/galaxypath is configured!", "error")
 		return
+	end
+	
+	-- obey max concurrent searches limit if set
+	if myconfig.maxconcurrent > 0 then
+		local searches = getConcurrentSearchesCount()
+		debugLog("concurrent searches: %s", searches)
+		if searches and searches >= myconfig.maxconcurrent then
+			scriptLog(Player(), "search execution cancelled due to concurrent search limit reached (maxconcurrent: %s)", myconfig.maxconcurrent)
+			invokeClientFunction(Player(myplayerindex), "refreshUIInfo", term, "Too many players searching! Please wait before trying again ...", "warning")
+			return
+		end
+	end
+	
+	-- obey search delay if set	
+	if myconfig.searchdelay > 0 then
+		local currentsearch = math.floor(systemTime())
+		local lastsearch = getPlayerLastSearchTime(Player().index)
+		debugLog("searchdelay: %s | lastsearch: %s", myconfig.searchdelay, lastsearch)
+		if lastsearch and currentsearch < (lastsearch + myconfig.searchdelay) then
+			local secsleft = (lastsearch + myconfig.searchdelay) - currentsearch
+			scriptLog(Player(), "search execution cancelled due to search delay (searchdelay: %s, secsleft: %s)", myconfig.searchdelay, secsleft)
+			invokeClientFunction(Player(myplayerindex), "refreshUIInfo", term, string.format("Please wait %i second(s) before searching again ...", secsleft), "warning")
+			return
+		end
 	end
 
 	-- start of search
 	scriptLog(Player(), "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | sectorchecks: %s | galaxypath: %s",
 			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.framesectorchecks, myconfig.galaxypath)
 			
-	-- search current sector via API first	
+	-- search current sector via API first (to get entity indices)
 	resultsLocal = searchCurrentSectorStations(term)
+	
+	-- get players current sector
+	local startsector = vec2(Sector():getCoordinates())
+	
+	-- get coords for all existing sectors by checking galaxy files  (excluding startsector)
+	local sectors = getExistingSectors(myconfig.galaxypath, startsector)
 	
 	-- init frame-based search in sectors
 	secsearch = SectorsSearch(myconfig.galaxypath)
-	
-	local startsector = vec2(Sector():getCoordinates())
-	local sectors = getExistingSectors(myconfig.galaxypath, true)
-	
 	secsearch:initBatchProcessing(term, sectors, myconfig.framesectorloads, myconfig.maxresults, startsector)
+	
+	-- add concurrent search info
+	if myconfig.maxconcurrent and myconfig.maxconcurrent > 0 then
+		searchstart = math.floor(systemTime())
+		addConcurrentSearch(searchstart)
+		debugLog("added concurrent search (searchstart: %s)", searchstart)
+	end
 	
 	-- trigger start of frame-based search
 	dosearch = true
@@ -434,6 +480,17 @@ end
 
 
 function finishSearch()
+
+	-- remove concurrent search info
+	if myconfig.maxconcurrent and myconfig.maxconcurrent > 0 then
+		removeConcurrentSearch(searchstart)
+		debugLog("removed concurrent search (searchstart: %s)", searchstart)
+	end
+	
+	-- apply search delay even in case of errors so these cannot be abused to spam
+	if myconfig.searchdelay > 0 then
+		setPlayerLastSearchTime(Player().index)
+	end
 		
 	local passedTime = secsearch.endTime - secsearch.startTime	
 	
@@ -443,7 +500,9 @@ function finishSearch()
 				passedTime, secsearch.total_batches, secsearch.total_sectorchecks, secsearch.total_sectorloads, secsearch.readTime)
 	
 		if uierror then
-			invokeClientFunction(Player(myplayerindex), "refreshUIError", secsearch.searchterm, uierror)
+			invokeClientFunction(Player(myplayerindex), "refreshUIInfo", secsearch.searchterm, uierror, "error")
+		elseif uiwarn then
+			invokeClientFunction(Player(myplayerindex), "refreshUIInfo", secsearch.searchterm, uiwarn, "warning")
 		end
 	else
 		-- success, show results by distance

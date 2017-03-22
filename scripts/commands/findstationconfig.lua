@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha4
+version: 0.5alpha
 author: w00zla
 
 file: commands/findstationconfig.lua
@@ -48,17 +48,14 @@ function updateConfig(player, configkey, configval)
 	if configkey == "galaxy" then
 		configval = validateParameter(configval, "Name")
 		if configval then
-			-- get %APPDATA% path because game uses this as base directory to save galaxies 
-			-- this is by default, even for dedicated servers!
-			local appdatapath = os.getenv("APPDATA")
-			if not appdatapath or appdatapath == "" then
-				scriptLog(player, "ERROR -> no appdatapath available")
-				player:sendChatMessage("findstation", 0, "Error: no appdatapath available!")
-				return
-			end	
+			local datapath = getDefaultDataPath()
+			if not datapath then
+				scriptLog(player, "ERROR: unable to determine default datapath!")
+				player:sendChatMessage("findstation", 0, "Error: unable to determine default datapath!")
+			end
 			configkey = "galaxypath"
 			galaxyname = configval
-			configval = appdatapath .. "\\Avorion\\galaxies\\" .. configval .. "\\"
+			configval = datapath .. configval .. "/"
 			if not checkFileExists(configval .. "server.ini") then
 				player:sendChatMessage("findstation", 0, "Error: Unable to find directory for galaxy '%s'!", galaxyname)
 				return
@@ -74,10 +71,16 @@ function updateConfig(player, configkey, configval)
 			end
 			valid = true
 		end
+	elseif configkey == "framesectorloads" then
+		configval = validateParameter(configval, "pnum")
+		if configval then valid = true end
 	elseif configkey == "maxresults" then
 		configval = validateParameter(configval, "pnum")
 		if configval then valid = true end
-	elseif configkey == "framesectorloads" then
+	elseif configkey == "maxconcurrent" then
+		configval = validateParameter(configval, "pnum")
+		if configval then valid = true end
+	elseif configkey == "searchdelay" then
 		configval = validateParameter(configval, "pnum")
 		if configval then valid = true end
 	else
@@ -116,6 +119,8 @@ Usage:
 /findstationconfig galaxypath <GALAXYPATH>
 /findstationconfig maxresults <NUMBER>
 /findstationconfig framesectorloads <NUMBER>
+/findstationconfig maxconcurrent <NUMBER>
+/findstationconfig searchdelay <NUMBER>
 Parameter:
 <GALAXYNAME> = name of current galaxy
 <GALAXYPATH> = full directory path for galaxy

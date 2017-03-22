@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha4
+version: 0.5alpha
 author: w00zla
 
 file: lib/findstation/sectorssearch.lua
@@ -145,9 +145,9 @@ function SectorsSearch:searchSectorFile(x, y)
 		
 	-- read sector file from disk and parse its XML
 	local sectorFile = string.format("%s_%sv", x, y)
-	local sectorFilePath = self.galaxypath .. "sectors\\" .. sectorFile
+	local sectorFilePath = self.galaxypath .. "sectors/" .. sectorFile
 	
-	debugLog("sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath)
+	--debugLog("sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath)
 	local startRead = systemTimeMs()
 	local sectorXml, err = readSectorFile(sectorFilePath)
 	self.readTime = self.readTime + (systemTimeMs() - startRead)
