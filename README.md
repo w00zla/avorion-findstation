@@ -70,7 +70,7 @@ Used to set the configuration values for /findstation command.
 
 ##  INSTALLATION
 
-Download the ZIP file of the [latest release](https://github.com/w00zla/avorion-findstation/releases) and extract it to `<Avorion>\data\` directory, like with other mods.
+Download the ZIP file of the **[latest release](https://github.com/w00zla/avorion-findstation/releases)** and extract it to `<Avorion>\data\` directory, like with other mods.
 
 *No vanilla script files will be overwritten, so there should be no problems with other mods!*
 
