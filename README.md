@@ -4,6 +4,13 @@ I found a way to read the sector XML files in an usable way within Avorion ingam
 
 This means i managed to create a mod which can be used to **search for specific stations in every found/created sector in your galaxy!**
 
+*Search UI:*  
+![screenshot](http://gdurl.com/Bddn)
+
+*Search Command:*  
+![screenshot](http://gdurl.com/9wjq)
+
+
 *The script basically works by searching through all existing sector files, reads their data and searches for the given term ->
 This implementation is a workaround until proper access to sector data is provided by the game for scripts, and some functions used for file access by this script even may be permitted in the future due to security/performance reasons (mods being able to read/write any file on the system is never good in terms of security)!*
 
