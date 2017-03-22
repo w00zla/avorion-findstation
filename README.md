@@ -26,7 +26,8 @@ Enables/disables the UI *(menu item & window)* for station search.
 Finds near stations in any of the found/created sectors in the galaxy and displays them in chat-window.
 
 *Usage:*   
-`/findstation <SEARCHTERM>`  
+`/findstation <SEARCHTERM>`
+
 *Parameters:*   
 `<SEARCHTERM>` = term to search in station names *(spaces possible, case-insensitive)*
 
@@ -40,7 +41,8 @@ Used to set the configuration values for /findstation command.
 `/findstationconfig maxresults <NUMBER>`  
 `/findstationconfig framesectorloads <NUMBER>`  
 `/findstationconfig maxconcurrent <NUMBER>`  
-`/findstationconfig searchdelay <NUMBER>`  
+`/findstationconfig searchdelay <NUMBER>`
+
 *Parameters:*  
 `<GALAXYNAME>` = name of current galaxy  
 `<GALAXYPATH>` = full directory path for galaxy  
