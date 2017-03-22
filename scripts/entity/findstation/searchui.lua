@@ -1,8 +1,6 @@
 --[[
 
 FINDSTATION MOD
-
-version: 0.5alpha
 author: w00zla
 
 file: entity/findstation/searchui.lua

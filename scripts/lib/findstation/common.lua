@@ -1,8 +1,6 @@
 --[[
 
 FINDSTATION MOD
-
-version: 0.5alpha
 author: w00zla
 
 file: lib/findstation/common.lua
