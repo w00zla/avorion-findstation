@@ -1,124 +1,260 @@
+--[[
+
+FINDSTATION MOD
+
+version: alpha2
+author: w00zla
+
+file: player/cmd/findstation.lua
+desc: player entity script for /findstation command
+
+]]--
+
 if onServer() then -- make this script run server-side only
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
+require "stringutility"
 require "utility"
-require "xml"
+
+require "cmd.findstationcommon"
+require "cmd.findstationxml"
 
 
-local currentgalaxy
-local resultlimitchat
+-- constants / defaults
+local default_framesectorchecks = 2000
+local default_framesectorloads = 10
+local default_maxchatresults = 18 
+
+-- configs
+local galaxypath
+local framesectorchecks
+local framesectorloads
+local maxchatresults
+
+-- runtime vars
+local searchterm
+local resultsByDistance
+local resultscount
+local dosearch
+local searching
+local sectorError
+local lastX
+local lastY
+
+-- diag vars
+local startTime
+local readTime
+local total_sectorchecks
+local total_sectorloads
+local total_frames
 
 
 function initialize()
 
-	resultlimitchat = 18
-	-- get config from server entity
-	currentgalaxy = Server():getValue("findstation_galaxy")
+	-- init static settings
+	maxchatresults = default_maxchatresults
+	
+	-- subscribe for callbacks
+	Player():registerCallback("onSectorLeft", "onSectorLeft")
 
 end
 
 
---[[function secure()
-
-	print("DEBUG findstation => secure() called")
-	return currentgalaxy
-	
-end]]--
-
-
---[[function restore(galaxyname)
-
-	print("DEBUG findstation => restore() called")
-	currentgalaxy = galaxyname
-	
-end]]--
-
-
-function updateConfig(galaxyname)
-
-	currentgalaxy = galaxyname
-	-- save config to server entity since restore() does not work!
-	Server():setValue("findstation_galaxy", currentgalaxy)
-	print(string.format("DEBUG findstation => CONFIG updated -> currentgalaxy: %s", currentgalaxy))
-	Player():sendChatMessage("findstation", 0, "Configuration updated")
-	
-end
-
-
-function executeSearch(searchterm)
+function executeSearch(term)
 
 	local player = Player()
-	
-	-- check required vars for target folder 
-	local appdatapath = os.getenv("APPDATA")
-	if not appdatapath or appdatapath == "" then
-		print("DEBUG findstation => ERROR -> no appdatapath available")
-		player:sendChatMessage("findstation", 0, "Error: no appdatapath available!")
+
+	-- prevent parallel search requests	
+	if searching then
+		print("SCRIPT findstation => parallel search execution cancelled")
+		player:sendChatMessage("findstation", 0, "Search in progress ... please wait")
 		return
-	end	
-	if not currentgalaxy or currentgalaxy == "" then
-		print("DEBUG findstation => ERROR -> no galaxy configured")
-		player:sendChatMessage("findstation", 0, "Error: no galaxy configured!")
+	end
+	dosearch = false
+	
+	-- get basic config
+	galaxypath = loadConfigValue("galaxypath")
+	if not galaxypath or galaxypath == "" then
+		print("SCRIPT findstation => ERROR -> no galaxypath configured!")
+		player:sendChatMessage("findstation", 0, "No galaxy or galaxypath configured. Execute command /findstationconfig first!")
 		return
 	end
 	
-	local startTime = systemTimeMs()
-	print(string.format("DEBUG findstation => START SEARCH -> searchterm: %s | currentgalaxy: %s | appdatapath: %s", searchterm, currentgalaxy, appdatapath))
+	-- get additional config
+	framesectorchecks = tonumber(loadConfigValue("framesectorchecks", default_framesectorchecks))
+	framesectorloads = tonumber(loadConfigValue("framesectorloads", default_framesectorloads))
+	
+	-- feedback for start of search
+	searchterm = term
+	startTime = systemTimeMs()
+	print(string.format("SCRIPT findstation => START SEARCH -> searchterm: %s | framesectorchecks: %s | framesectorloads: %s | galaxypath: %s", searchterm, framesectorchecks, framesectorloads, galaxypath))
 	player:sendChatMessage("findstation", 0, string.format("Searching for '%s' in known stations...", searchterm))
 
-	local sectorsPath = appdatapath .. "\\Avorion\\galaxies\\" .. currentgalaxy .. "\\sectors\\"	
-	local resultsByDistance = {}
+	-- reset runtime and diagnostic vars
+	resultscount = 0
+	resultsByDistance = {}
 	
-	-- gather results of stations in created/existing sectors
-	local sectorError
-	for x = -499, 500, 1 do
-		for y = -499, 500, 1 do
-			if Galaxy():sectorExists(x, y) then
-			
-				local sectorFile = string.format("%s_%sv", x, y)
-				local sectorFilePath = sectorsPath .. sectorFile
-				--print(string.format("DEBUG findstation => sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath))
-				local sectorXml = readSectorFile(sectorFilePath)
-				if not sectorXml then
-					print(string.format("DEBUG findstation => ERROR -> could not open or parse XML file for sector (%s:%s)", x, y))
-					player:sendChatMessage(string.format("findstation", 0, "Error: could not read file for sector \\s(%s:%s)!", x, y))
-					sectorError = true
-					break
-				end
-				local results = searchSectorStations(sectorXml, searchterm)
-				
-				if results and #results > 0 then	
-					local coords = string.format("(%i:%i)", x, y) 
-					local dist = getCurrentCoordsDistance(x, y)
-					if not resultsByDistance[dist] then
-						resultsByDistance[dist] = {}
-					end
-					resultsByDistance[dist][coords] = results
-					
-					--print(string.format("DEBUG findstation => sector (%s:%s) has results (distance=%i):", x, y, dist))					
-					--for _, v in pairs(results) do
-					--	print(string.format("DEBUG findstation => -- %s", v))							
-					--end
-				end
-								
-			end
-		end
-		if sectorError then break end
+	total_sectorchecks = 0
+	total_sectorloads = 0
+	total_frames = 0
+	readTime = 0
+	
+	-- trigger start of search
+	dosearch = true
+	
+end
+
+
+function onSectorLeft(playerIndex, x, y) 
+
+	if searching then
+		print("SCRIPT findstation => cancelled search due to player jumping")
+		Player():sendChatMessage("findstation", 0, "Search cancelled (player left sector)!")
+		sectorError = true
 	end
+
+end
+
+
+function updateServer(timeStep)
+
+	-- just return if no search is pending
+	if not dosearch then return end	
+	searching = true
+	
+	total_frames = total_frames + 1
+	local sectorchecks_last = total_sectorchecks
+	local sectorloads_last = total_sectorloads
+	
+	-- do simple "bottom-top" search through all possible sectors
+	local x = -499
+	if lastX then x = lastX	
+	else lastX = x end
+	local y = -499
+	if lastY then y = lastY	
+	else lastY = y end
+
+	-- start/continue processing sectors from initial/last state
+	while x <= 500 do
+	
+		processSector(x, y)
+		if sectorError then break end
+		
+		if y < 500 then
+			y = y + 1
+			lastY = y
+		else
+			y = -499
+			lastY = nil
+			x = x + 1
+			lastX = x	
+		end
+	
+		-- defer processing to next frame if any per-frame limit hits
+		if (total_sectorchecks - sectorchecks_last) >= framesectorchecks then return end
+		if (total_sectorloads - sectorloads_last) >= framesectorloads then return end
+	end	
+
+	-- reset search states
+	lastX = nil
+	lastY = nil
+	dosearch = false
+	searching = false
+	
+	-- show results and do final cleanup
+	finishSearch()	
+end
+
+
+function processSector(x, y)
+
+	total_sectorchecks = total_sectorchecks + 1
+	--print(string.format("DEBUG findstation => checked sector (%s:%s)", x, y))
+	
+	if Galaxy():sectorExists(x, y) then
+	
+		-- read sector file and search its XML for term
+		total_sectorloads = total_sectorloads + 1	
+		local numresults = searchSectorFile(x, y)
+		--print(string.format("DEBUG findstation => loaded sector (%s:%s) -> results: %s", x, y, numresults))
+		
+		if numresults then
+			resultscount = resultscount + numresults	
+			return numresults
+		else
+			return 0
+		end
+	end
+
+end
+
+
+function searchSectorFile(x, y)
+		
+	-- read sector file from disk and parse its XML
+	local sectorFile = string.format("%s_%sv", x, y)
+	local sectorFilePath = galaxypath .. "sectors\\" .. sectorFile
+	
+	--print(string.format("DEBUG findstation => sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath))
+	local startRead = systemTimeMs()
+	local sectorXml = readSectorFile(sectorFilePath)
+	readTime = readTime + (systemTimeMs() - startRead)
+	
+	if not sectorXml then
+		print(string.format("SCRIPT findstation => ERROR -> could not open or parse XML file for sector (%s:%s)", x, y))
+		Player():sendChatMessage("findstation", 0, "Error: could not read file for sector \\s(%s:%s)! Is configured galaxy/galaxypath correct?", x, y)
+		sectorError = true
+		return 
+	end
+	
+	-- search XML for stations with given term in title
+	local results = searchSectorStations(sectorXml, searchterm)
+	
+	-- save results based on distance and coordinates
+	if results and #results > 0 then	
+		local coords = string.format("(%i:%i)", x, y) 
+		local dist = getCurrentCoordsDistance(x, y)
+		if not resultsByDistance[dist] then
+			resultsByDistance[dist] = {}
+		end
+		resultsByDistance[dist][coords] = results
+		
+		return #results
+	end
+	
+end
+
+
+function finishSearch()
+		
+	local passedTime = systemTimeMs() - startTime	
 	
 	if sectorError then
 		-- error while reading sector files
-		print("DEBUG findstation => END SEARCH (aborted with errors)")
+		print(string.format("SCRIPT findstation => SEARCH ABORTED (%s ms, frames %s, loads %s, checks %s, xml %s ms)", passedTime, total_frames, total_sectorloads, total_sectorchecks, readTime))
 	else
+		local player = Player()
 		-- success, show results by distance
 		showResults(player, resultsByDistance)
 		
-		local passedTime = systemTimeMs() - startTime	
-		print(string.format("DEBUG findstation => END SEARCH (done in %d ms)", passedTime))
-		player:sendChatMessage("findstation", 0, string.format("Search done (%d ms)", passedTime))
+		print(string.format("SCRIPT findstation => END SEARCH (%s results, %s ms, %s frames, %s loads, %s checks, read %s ms)", resultscount, passedTime, total_frames, total_sectorloads, total_sectorchecks, readTime))
+		--player:sendChatMessage("findstation", 0, string.format("Search done (%d results, %d ms, %d frames, %d loads, %d checks, read %d ms)", resultscount, passedTime, total_frames, total_sectorloads, total_sectorchecks, readTime))
+		local passedsecs = passedTime / 1000
+		player:sendChatMessage("findstation", 0, string.format("Search finished (%d results, %.1f seconds)", resultscount, passedsecs))
 	end
-			
+	
+	-- clear all search related variables
+	startTime = nil
+	readTime = nil
+	total_sectorchecks = nil
+	total_sectorloads = nil
+	total_frames = nil
+	searchterm = nil
+	resultsByDistance = nil
+	resultscount = nil
+	sectorError = nil
+	
 end
 
 
@@ -130,130 +266,19 @@ function showResults(player, resultsByDistance)
 		for c, v2 in pairs(v1) do
 			for _, v3 in pairs(v2) do
 				player:sendChatMessage("findstation", 0, string.format("- %s \\s%s distance: %i", v3, c, d))
-				if i >= resultlimitchat then
+				if i >= maxchatresults then
 					break
 				else				
 					i = i + 1
 				end
 			end
-			if i >= resultlimitchat then break end
+			if i >= maxchatresults then break end
 		end
-		if i >= resultlimitchat then break end
+		if i >= maxchatresults then break end
 	end
 
 end
 
-
-function searchSectorStations(xmlView, term)
-
-	local xmlTitles = findTableByLabel(xmlView, "titles")
-	
-	if xmlView.xarg.numStations == 0 or xmlTitles.empty then
-		--print("DEBUG findstation => no stations available in sector")
-		return
-	end
-	
-	local results = {}
-	
-	--print("DEBUG findstation => found stations:")
-	for _, v in pairs(xmlTitles) do	
-		if type(v) == "table" and v.xarg then
-			local xmlTitle = v
-			local stationstr = xmlTitle.xarg.str
-			stationstr = resolveTitleTokens(stationstr, xmlTitle)
-			--print(string.format("DEBUG findstation => -- %s", stationstr))
-			
-			-- do a case-insensitive search for the given term
-			if string.find(stationstr:lower(), term:lower(), 1, true) then
-				table.insert(results, stationstr)
-			end
-		end
-	end
-
-	return results
-	
-end
-
-
-function resolveTitleTokens(str, xmlTitle)
-
-	local result = str
-	for t in string.gmatch(str, "${(%w+)}") do
-		local tval = t
-		for _, v in pairs(xmlTitle) do
-			if type(v) == "table" and v.xarg and v.xarg.key == t then
-				tval = v[1]			
-			end
-		end
-		result = string.gsub(result, string.format("${%s}", t), tval)
-    end
-
-	return result
-end
-
-
--- searches recursively for a (inner) table with key "label" and given value
-function findTableByLabel(xmlTable, label)
-
-	if xmlTable.label and xmlTable.label == label then
-		return xmlTable
-	end
-
-	for k, v in pairs(xmlTable) do
-		if type(v) == "table" then
-			local result = findTableByLabel(v, label)
-			if result then
-				return result
-			end
-		end
-	end
-
-end
-
-
--- read sector XML file and parse XML into table tree-like structure
-function readSectorFile(path)
-	local sectorFile, err = io.open(path)
-	if err then
-		print(string.format("DEBUG findstation => ERROR on opening file '%s': %s'", path, err))
-		return
-	end
-	
-	local xmlString = sectorFile:read("*a")
-	sectorFile:close()
-	local xmlTable = collect(xmlString)
-	
-	--print(string.format("DEBUG findstation => XML table for file '%s':", path))
-	--printTable(xmlTable)
-	
-	return xmlTable[2] -- removes the xml declaration item, returns only the "view" element
-end
-
-
-function getCurrentCoordsDistance(x, y)
-
-	local vecSector = vec2(Sector():getCoordinates())
-	local vecCoords = vec2(x, y)
-	local dist = distance(vecSector, vecCoords)
-
-	return dist
-
-end
-
-
-function pairsByKeys (t, f)
-	local a = {}
-	for n in pairs(t) do table.insert(a, n) end
-	table.sort(a, f)
-	local i = 0      -- iterator variable
-	local iter = function ()   -- iterator function
-		i = i + 1
-		if a[i] == nil then return nil
-		else return a[i], t[a[i]]
-		end
-	end
-	return iter
-end
 
 
 end

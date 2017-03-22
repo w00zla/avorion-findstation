@@ -1,4 +1,21 @@
+--[[
+
+FINDSTATION MOD
+
+version: alpha2
+author: w00zla
+
+file: commands/findstation.lua
+desc: auto-included script to implement custom command /findstation
+
+]]--
+
 package.path = package.path .. ";data/scripts/lib/?.lua"
+
+require "cmd.findstationcommon"
+
+
+local playerscript = "cmd/findstation.lua"
 
 
 function execute(sender, commandName, ...)
@@ -8,13 +25,11 @@ function execute(sender, commandName, ...)
 	if #args > 0 and args[1] ~= "" then	
 		local searchterm = table.concat(args, " ")	
 
-		local script = "cmd/findstation.lua"
-		if not player:hasScript(script) then
-			player:sendChatMessage("findstation", 0, "Execute command /findstationconfig first!")
-			return
-		end
+		-- make sure entity scripts are present
+		ensureEntityScript(player, playerscript)
 
-		player:invokeFunction(script, "executeSearch", searchterm)
+		-- call entity function to start search
+		player:invokeFunction(playerscript, "executeSearch", searchterm)
 		
 	else
 		player:sendChatMessage("findstation", 0, "Missing parameters! Use '/help findstation' for information.")
