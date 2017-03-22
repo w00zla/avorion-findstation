@@ -2,11 +2,11 @@
 
 FINDSTATION MOD
 
-version: alpha3
+version: alpha4
 author: w00zla
 
 file: lib/findstation/sectorxml.lua
-desc: library script for findstation commands
+desc: library script for reading sector files and parse the XML
 
 ]]--
 
@@ -30,7 +30,7 @@ function readSectorFile(path)
 	
 	local xmlTable = collect(xmlString)
 	
-	--print(string.format("DEBUG findstation => XML table for file '%s':", path))
+	--debugLog("XML table for file '%s':", path)
 	--printTable(xmlTable)
 	
 	return xmlTable[2] -- removes the xml declaration item, returns only the "view" element
@@ -44,19 +44,19 @@ function searchSectorStations(xmlView, term)
 	local xmlTitles = findTableByLabel(xmlView, "titles")
 	
 	if xmlView.xarg.numStations == 0 or xmlTitles.empty then
-		--print("DEBUG findstation => no stations available in sector")
+		--debugLog("no stations available in sector!")
 		return
 	end
 	
 	local results = {}
 	
-	--print("DEBUG findstation => found stations:")
+	--debugLog("found stations:")
 	for _, v in pairs(xmlTitles) do	
 		if type(v) == "table" and v.xarg then
 			local xmlTitle = v
 			local stationstr = xmlTitle.xarg.str
 			stationstr = resolveTitleTokens(stationstr, xmlTitle)
-			--print(string.format("DEBUG findstation => -- %s", stationstr))
+			--debugLog("-- %s", stationstr)
 			
 			-- do a case-insensitive search for the given term
 			if string.find(stationstr:lower(), term:lower(), 1, true) then

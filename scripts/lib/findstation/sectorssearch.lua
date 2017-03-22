@@ -1,8 +1,21 @@
+--[[
+
+FINDSTATION MOD
+
+version: alpha4
+author: w00zla
+
+file: lib/findstation/sectorssearch.lua
+desc: class for searches in sector XML files
+
+]]--
+
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
 require ("utility")
 require ("stringutility")
 
+require "findstation.common"
 require "findstation.sectorxml"
 
 
@@ -28,7 +41,6 @@ function SectorsSearch:initialize(galaxypath)
 	-- runtime vars
 	self.searchterm = ""
 	self.batchloads = 0
-	self.batchchecks = 0
 	self.resultlimit = 0
 	self.resultsCount = 0
 	self.resultsByDistance = {}
@@ -106,81 +118,16 @@ function SectorsSearch:continueBatchProcessing()
 end
 
 
--- start a simple search from bottom left to top right of sector grid
-function SectorsSearch:initBTBatchProcessing(searchterm, batchchecks, batchloads)
-
-	-- set search parameters
-	self.searchterm = searchterm
-	self.batchchecks = batchchecks
-	self.batchloads = batchloads
-		
-	-- reset processing state
-	self.lastX = -499
-	self.lastY = -499
-	
-	-- general search init
-	self:initSearchExecution()
-	
-end
-
-
-function SectorsSearch:continueBTBatchProcessing()
-
-	if self.startTime == 0 then
-		self.startTime = systemTimeMs()
-	end
-
-	self.total_batches = self.total_batches + 1
-	local sectorchecks_last = self.total_sectorchecks
-	local sectorloads_last = self.total_sectorloads
-	
-	-- do simple "bottom-top" search through all possible sectors
-	local x = self.lastX
-	local y = self.lastY
-
-	-- start/continue processing sectors from initial/last state
-	while x <= 500 do
-
-		self:processSector(x, y)
-		if self.error then return end
-					
-		if y < 500 then
-			y = y + 1
-			self.lastY = y
-		else
-			y = -499
-			self.lastY = y
-			x = x + 1
-			self.lastX = x	
-		end
-	
-		-- defer processing to next frame if any per-frame limit hits
-		if self.batchloads > 0 and 
-			(self.total_sectorloads - sectorloads_last) >= self.batchloads then 
-			return false 
-		end
-		if self.batchchecks > 0 and 
-			(self.total_sectorchecks - sectorchecks_last) >= self.batchchecks then 
-			return false 
-		end
-	end	
-	
-	self.endTime = systemTimeMs()
-		
-	return true
-end
-
-
 function SectorsSearch:processSector(x, y)
 
 	self.total_sectorchecks = self.total_sectorchecks + 1
-	--print(string.format("DEBUG findstation => checked sector (%s:%s)", x, y))
+	--debugLog("checked sector (%s:%s)", x, y)
 	if not Galaxy():sectorExists(x, y) then return end
 	
 	-- read sector file and search its XML for term
 	self.total_sectorloads = self.total_sectorloads + 1	
 	local numresults = self:searchSectorFile(x, y)
-	--print(string.format("DEBUG findstation => loaded sector (%s:%s) -> results: %s", x, y, numresults))
+	--debugLog("loaded sector (%s:%s) -> results: %s", x, y, numresults)
 	
 	if numresults then
 		self.resultsCount = self.resultsCount + numresults	
@@ -200,13 +147,13 @@ function SectorsSearch:searchSectorFile(x, y)
 	local sectorFile = string.format("%s_%sv", x, y)
 	local sectorFilePath = self.galaxypath .. "sectors\\" .. sectorFile
 	
-	--print(string.format("DEBUG findstation => sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath))
+	debugLog("sector (%s:%s) exists, reading file '%s'", x, y, sectorFilePath)
 	local startRead = systemTimeMs()
 	local sectorXml, err = readSectorFile(sectorFilePath)
 	self.readTime = self.readTime + (systemTimeMs() - startRead)
 	
 	if not sectorXml then
-		print(string.format("SCRIPT findstation => ERROR: XML for sector (%s:%s) could not be retrieved! Message: %s", x, y, err))
+		scriptLog(Player(), "ERROR: XML for sector (%s:%s) could not be retrieved! Message: %s", x, y, err)
 		if err then
 			self.error = err
 		else
@@ -220,7 +167,7 @@ function SectorsSearch:searchSectorFile(x, y)
 	
 	-- save results based on distance and coordinates
 	if results and #results > 0 then	
-		local coords = string.format("(%i:%i)", x, y) 
+		local coords = string.format("%i:%i", x, y) 
 		local dist = getCurrentCoordsDistance(x, y)
 		if not self.resultsByDistance[dist] then
 			self.resultsByDistance[dist] = {}

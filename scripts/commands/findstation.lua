@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha3
+version: alpha4
 author: w00zla
 
 file: commands/findstation.lua
@@ -15,9 +15,6 @@ package.path = package.path .. ";data/scripts/lib/?.lua"
 require "findstation.common"
 
 
-local playerscript = "cmd/findstation.lua"
-
-
 function execute(sender, commandName, ...)
 	local args = {...}	
 	local player = Player(sender)	
@@ -26,10 +23,10 @@ function execute(sender, commandName, ...)
 		local searchterm = table.concat(args, " ")	
 
 		-- make sure entity scripts are present
-		ensureEntityScript(player, playerscript)
+		ensureEntityScript(player, fs_searchcmd)
 
 		-- call entity function to start search
-		player:invokeFunction(playerscript, "executeSearch", searchterm)
+		player:invokeFunction(fs_searchcmd, "executeSearch", searchterm)
 		
 	else
 		player:sendChatMessage("findstation", 0, "Missing parameters! Use '/help findstation' for information.")

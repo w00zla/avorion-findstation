@@ -2,7 +2,7 @@
 
 FINDSTATION MOD
 
-version: alpha3
+version: alpha4
 author: w00zla
 
 file: lib/findstation/config.lua
@@ -17,7 +17,7 @@ package.path = package.path .. ";data/scripts/lib/?.lua"
 local defaults = {
 	framesectorchecks = 2000,
 	framesectorloads = 10,
-	maxresults = 18,
+	maxresults = 30,
 	maxchatresults = 18
 }
 
@@ -45,5 +45,20 @@ function Config.loadValue(config)
 	return val
 
 end
+
+
+function Config.getCurrent()
+
+	local cfg = {
+		galaxypath = Config.loadValue("galaxypath"),
+		framesectorchecks = tonumber(Config.loadValue("framesectorchecks")),
+		framesectorloads = tonumber(Config.loadValue("framesectorloads")),
+		maxchatresults = tonumber(Config.loadValue("maxchatresults")),
+		maxresults = tonumber(Config.loadValue("maxresults"))
+	}
+	
+	return cfg
+end
+
 
 return Config
