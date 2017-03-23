@@ -13,12 +13,12 @@ package.path = package.path .. ";data/scripts/lib/?.lua"
 
 -- available defaults
 local defaults = {
-	framesectorchecks = 2000,
 	framesectorloads = 10,
 	maxresults = 30,
 	maxchatresults = 18,
 	maxconcurrent = 0,
-	searchdelay = 0
+	searchdelay = 0,
+	searchmode = "player"
 }
 
 
@@ -51,7 +51,7 @@ function Config.getCurrent()
 
 	local cfg = {
 		galaxypath = Config.loadValue("galaxypath"),
-		framesectorchecks = tonumber(Config.loadValue("framesectorchecks")),
+		searchmode = Config.loadValue("searchmode"),
 		framesectorloads = tonumber(Config.loadValue("framesectorloads")),
 		maxchatresults = tonumber(Config.loadValue("maxchatresults")),
 		maxresults = tonumber(Config.loadValue("maxresults")),

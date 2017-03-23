@@ -69,6 +69,16 @@ function updateConfig(player, configkey, configval)
 			end
 			valid = true
 		end
+	elseif configkey == "searchmode" then
+		configval = validateParameter(configval, "mode")
+		if configval then
+			configval = configval:lower()
+			if configval ~= "player" and configval ~= "galaxy" then
+				player:sendChatMessage("findstation", 0, "Error: Invalid search mode (use 'player' or 'galaxy')!")
+				return
+			end
+			valid = true
+		end
 	elseif configkey == "framesectorloads" then
 		configval = validateParameter(configval, "pnum")
 		if configval then valid = true end
@@ -83,7 +93,7 @@ function updateConfig(player, configkey, configval)
 		if configval then valid = true end
 	else
 		-- unknown config
-		scriptLog(player, "unknown configuration -> key: %s | val: %s", configkey, configval)
+		scriptLog(player, "unknown configuration (key: %s | val: %s)", configkey, configval)
 		player:sendChatMessage("findstation", 0, "Error: Unknown configuration '%s'!", configkey)
 		return
 	end
@@ -91,7 +101,7 @@ function updateConfig(player, configkey, configval)
 	if valid then
 		-- valid update -> save config
 		Config.saveValue(configkey, configval)		
-		scriptLog(player, "CONFIG updated ->key: %s | val: %s", configkey, configval)
+		scriptLog(player, "CONFIG updated -> key: %s | val: %s", configkey, configval)
 		player:sendChatMessage("findstation", 0, "Configuration updated successfully")
 	else
 		-- invalid value	
@@ -115,6 +125,7 @@ Configuration helper for the /findstation command.
 Usage:
 /findstationconfig galaxy <GALAXYNAME>
 /findstationconfig galaxypath <GALAXYPATH>
+/findstationconfig searchmode <MODE>
 /findstationconfig maxresults <NUMBER>
 /findstationconfig framesectorloads <NUMBER>
 /findstationconfig maxconcurrent <NUMBER>
@@ -122,6 +133,7 @@ Usage:
 Parameter:
 <GALAXYNAME> = name of current galaxy
 <GALAXYPATH> = full directory path for galaxy
+<MODE> = one of the available search modes 'player' or 'galaxy''
 <NUMBER> = any positive number or 0
 ]]
 end

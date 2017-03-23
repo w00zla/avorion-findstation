@@ -96,14 +96,24 @@ function executeSearch(term)
 	end
 
 	-- start of search
-	scriptLog(player, "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | sectorchecks: %s | galaxypath: %s",
-			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.framesectorchecks, myconfig.galaxypath)
+	scriptLog(player, "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | galaxypath: %s",
+			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.galaxypath)
 	player:sendChatMessage("findstation", 0, "Searching for '%s' in known stations...", term)
+
 	
-	-- get coords for all existing sectors by checking galaxy files 
-	local sectors = getExistingSectors(myconfig.galaxypath)
-	--debugLog("sectors table:")
-	--printTable(sectors)
+	local sectors = nil
+	
+	if myconfig.searchmode == "galaxy" then
+		-- get coords for all existing sectors by checking their XML files 
+		local calltime = systemTimeMs()
+		sectors = getExistingSectors(myconfig.galaxypath)
+		debugLog("getExistingSectors() time: %s ms", (systemTimeMs() - calltime))
+	else
+		-- get coords for all player discovered sectors by parsing the player-dat file
+		local calltime = systemTimeMs()
+		sectors = getPlayerKnownLocations(myconfig.galaxypath, player)
+		debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
+	end
 
 	-- get players current sector
 	local startsector = vec2(Sector():getCoordinates())
@@ -111,6 +121,9 @@ function executeSearch(term)
 	-- init frame-based search in sectors
 	secsearch = SectorsSearch(myconfig.galaxypath)
 	secsearch:initBatchProcessing(term, sectors, myconfig.framesectorloads, myconfig.maxresults, startsector)
+
+	--debugLog("sectors table (sorted):")
+	--if fs_debugoutput then printTable(secsearch.sectors) end
 	
 	-- add concurrent search info
 	if myconfig.maxconcurrent and myconfig.maxconcurrent > 0 then

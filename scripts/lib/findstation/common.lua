@@ -21,7 +21,7 @@ fs_uiloader = "findstation/uiloader.lua"
 fs_searchui = "findstation/searchui.lua"
 
 -- DEBUG
-local debugoutput = false
+fs_debugoutput = true
 
 
 local modInfo = {
@@ -185,13 +185,13 @@ function sortSectorsByDistance(sectors, refsector)
 	local sorted = {}
 	
 	for _, coords in pairs(sectors) do 
-		local dist = getCoordsDistance(refsector.x, refsector.y, coords.x, coords.y)
+		local dist = math.ceil(getCoordsDistance(refsector.x, refsector.y, coords.x, coords.y))
 		if not sectorsByDist[dist] then
 			sectorsByDist[dist] = {}
 		end
 		table.insert(sectorsByDist[dist], coords)
 	end
-	
+
 	for d, v1 in pairsByKeys(sectorsByDist) do
 		for _, v2 in pairs(v1) do
 			table.insert(sorted, v2)
@@ -310,7 +310,7 @@ end
 
 function debugLog(msg, ...)
 
-	if debugoutput and msg and msg ~= "" then
+	if fs_debugoutput and msg and msg ~= "" then
 		local pinfo = ""
 		local player = Player()
 		if player then pinfo = " p#" .. tostring(player.index) end
@@ -455,4 +455,85 @@ function getPlayerLastSearchTime(playerIndex)
 		end
 	end
 
+end
+
+
+function getPlayerKnownLocations(galaxypath, player)
+
+	-- build path to player's data file
+	local datafilepath = galaxypath .. string.format("players\\player_%i.dat", player.index)
+	debugLog("datafilepath: %s", datafilepath)
+	
+	local f, err = io.open(datafilepath, "rb")
+	if err then
+		return nil, err
+	end
+
+	local data = f:read("*all")
+		
+	-- search for index strings
+	local pos_ks, end_ks = string.find(data, "known_sectors")	
+	if not pos_ks then
+		return nil, "known_sectors string not found"
+	end
+
+	local pos_c, end_c = string.find(data, "coords", end_ks)
+	if not pos_c then
+		return nil, "coords string not found"
+	end
+
+	local results = {}
+	
+	-- parse coordinates data
+	local offset_cd = end_c + 4
+	debugLog("offset_cd: %s", offset_cd)
+	
+	-- get amount of stored coordinates
+	f:seek("set", offset_cd)
+	local cd_count = f:read(4)	
+	cd_count = bytes_to_int(cd_count, "lit", false)			
+	debugLog("cd_count: %s", cd_count)
+	
+	-- parse XY value-pairs for coordinates			
+	for i = 1, cd_count, 1 do
+		local offset_cdxy = offset_cd + 4 + ((i - 1) * 8)	
+		f:seek("set", offset_cdxy)
+		
+		local coordx = f:read(4)
+		coordx = bytes_to_int(coordx, "lit", true)							
+		local coordy = f:read(4)
+		coordy = bytes_to_int(coordy, "lit", true)			
+		
+		results[i] = vec2(coordx, coordy)
+	end
+	
+	f:close()
+
+	return results
+
+end
+
+
+-- convert a byte string to its integer representation (taking care of endianness at byte level, and signedness)
+-- credits to jpjacobs (http://stackoverflow.com/questions/5241799/lua-dealing-with-non-ascii-byte-streams-byteorder-change)
+function bytes_to_int(str, endian, signed) 
+
+	-- use length of string to determine 8,16,32,64 bits
+    local t={str:byte(1,-1)}
+    if endian=="big" then --reverse bytes
+        local tt={}
+        for k=1,#t do
+            tt[#t-k+1]=t[k]
+        end
+        t=tt
+    end
+    local n=0
+    for k=1,#t do
+        n=n+t[k]*2^((k-1)*8)
+    end
+    if signed then
+        n = (n > 2^(#t*8-1) -1) and (n - 2^(#t*8)) or n -- if last bit set, negative.
+    end
+    return n
+	
 end

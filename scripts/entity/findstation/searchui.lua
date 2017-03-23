@@ -414,8 +414,8 @@ function executeSearch(playerindex, term)
 	end
 
 	-- start of search
-	scriptLog(Player(), "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | sectorchecks: %s | galaxypath: %s",
-			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.framesectorchecks, myconfig.galaxypath)
+	scriptLog(Player(), "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | galaxypath: %s",
+			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.galaxypath)
 			
 	-- search current sector via API first (to get entity indices)
 	resultsLocal = searchCurrentSectorStations(term)

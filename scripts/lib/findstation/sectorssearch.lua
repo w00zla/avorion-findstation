@@ -120,7 +120,10 @@ function SectorsSearch:processSector(x, y)
 
 	self.total_sectorchecks = self.total_sectorchecks + 1
 	--debugLog("checked sector (%s:%s)", x, y)
-	if not Galaxy():sectorExists(x, y) then return end
+	if not Galaxy():sectorExists(x, y) then 
+		debugLog("sector (%s:%s) does not exist", x, y)
+		return 
+	end
 	
 	-- read sector file and search its XML for term
 	self.total_sectorloads = self.total_sectorloads + 1	
