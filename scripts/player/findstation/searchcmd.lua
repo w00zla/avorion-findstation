@@ -99,24 +99,22 @@ function executeSearch(term)
 	scriptLog(player, "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | galaxypath: %s",
 			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.galaxypath)
 	player:sendChatMessage("findstation", 0, "Searching for '%s' in known stations...", term)
+	
+	-- get players current sector
+	local startsector = vec2(Sector():getCoordinates())
 
-	
 	local sectors = nil
-	
+	local calltime = systemTimeMs()
+
 	if myconfig.searchmode == "galaxy" then
-		-- get coords for all existing sectors by checking their XML files 
-		local calltime = systemTimeMs()
+		-- get coords for all existing sectors by checking their XML files 		
 		sectors = getExistingSectors(myconfig.galaxypath)
 		debugLog("getExistingSectors() time: %s ms", (systemTimeMs() - calltime))
 	else
 		-- get coords for all player discovered sectors by parsing the player-dat file
-		local calltime = systemTimeMs()
 		sectors = getPlayerKnownLocations(myconfig.galaxypath, player)
 		debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
 	end
-
-	-- get players current sector
-	local startsector = vec2(Sector():getCoordinates())
 	
 	-- init frame-based search in sectors
 	secsearch = SectorsSearch(myconfig.galaxypath)

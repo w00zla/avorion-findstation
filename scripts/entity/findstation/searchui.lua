@@ -423,8 +423,18 @@ function executeSearch(playerindex, term)
 	-- get players current sector
 	local startsector = vec2(Sector():getCoordinates())
 	
-	-- get coords for all existing sectors by checking galaxy files  (excluding startsector)
-	local sectors = getExistingSectors(myconfig.galaxypath, startsector)
+	local sectors = nil
+	local calltime = systemTimeMs()
+
+	if myconfig.searchmode == "galaxy" then
+		-- get coords for all existing sectors by checking their XML files 		
+		sectors = getExistingSectors(myconfig.galaxypath, startsector)
+		debugLog("getExistingSectors() time: %s ms", (systemTimeMs() - calltime))
+	else
+		-- get coords for all player discovered sectors by parsing the player-dat file
+		sectors = getPlayerKnownLocations(myconfig.galaxypath, Player(), startsector)
+		debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
+	end
 	
 	-- init frame-based search in sectors
 	secsearch = SectorsSearch(myconfig.galaxypath)

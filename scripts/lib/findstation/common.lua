@@ -458,7 +458,7 @@ function getPlayerLastSearchTime(playerIndex)
 end
 
 
-function getPlayerKnownLocations(galaxypath, player)
+function getPlayerKnownLocations(galaxypath, player, coords)
 
 	-- build path to player's data file
 	local datafilepath = galaxypath .. string.format("players\\player_%i.dat", player.index)
@@ -504,7 +504,13 @@ function getPlayerKnownLocations(galaxypath, player)
 		local coordy = f:read(4)
 		coordy = bytes_to_int(coordy, "lit", true)			
 		
-		results[i] = vec2(coordx, coordy)
+		if coords then
+			if coordx ~= coords.x and coordy ~= coords.y then
+				results[i] = vec2(coordx, coordy)
+			end
+		else
+			results[i] = vec2(coordx, coordy)
+		end		
 	end
 	
 	f:close()
