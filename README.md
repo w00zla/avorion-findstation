@@ -76,7 +76,7 @@ textures\icons\findstation\searchstation.png
 # HOW TO
 
 ### First use in galaxy:
-The mod tries to auto-detect the configuration when first search is executed in a galaxy.
+The mod tries to auto-detect the configuration when first search is executed in a galaxy.  
 If the auto-configuration fails, you must execute `/findstationconfig` and configure the name of the galaxy *(this has only to be done once per galaxy)*:  
 **`/findstationconfig galaxy <GALAXYNAME>`**  
 *Example:*  
@@ -89,7 +89,7 @@ If you want to hide/disable the UI and remove or uninstall the script, then use:
 
 
 ### First use in galaxy (dedicated server with "--datapath"):
-The mod tries to auto-detect the configuration when first search is executed in a galaxy.
+The mod tries to auto-detect the configuration when first search is executed in a galaxy.  
 If the auto-configuration fails, and you use the `--datapath` parameter for your server, you must execute `/findstationconfig` and configure the directory path of the galaxy *(this has only to be done once per galaxy)*. Just use the same path as for `--datapath` plus the galaxy name:  
 **`/findstationconfig galaxypath <GALAXYPATH>`**  
 *Example:*  
