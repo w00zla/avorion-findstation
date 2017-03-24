@@ -133,7 +133,7 @@ Usage:
 Parameter:
 <GALAXYNAME> = name of current galaxy
 <GALAXYPATH> = full directory path for galaxy
-<MODE> = one of the available search modes 'player' or 'galaxy''
+<MODE> = one of the available search modes 'player' or 'galaxy'
 <NUMBER> = any positive number or 0
 ]]
 end

@@ -45,6 +45,7 @@ Used to set the configuration values for /findstation command.
 *Usage:*   
 `/findstationconfig galaxy <GALAXYNAME>`   
 `/findstationconfig galaxypath <GALAXYPATH>`   
+`/findstationconfig searchmode <MODE>`  
 `/findstationconfig maxresults <NUMBER>`  
 `/findstationconfig framesectorloads <NUMBER>`  
 `/findstationconfig maxconcurrent <NUMBER>`  
@@ -53,6 +54,7 @@ Used to set the configuration values for /findstation command.
 *Parameters:*  
 `<GALAXYNAME>` = name of current galaxy  
 `<GALAXYPATH>` = full directory path for galaxy  
+`<MODE>` = one of the available search modes 'player' or 'galaxy'  
 `<NUMBER>` = any positive number or 0
 
 
@@ -74,25 +76,22 @@ textures\icons\findstation\searchstation.png
 # HOW TO
 
 ### First use in galaxy:
-Before you can use `/findstation` or `/findstationui` for a galaxy, you must execute `/findstationconfig` and configure the name of the galaxy *(this has only to be done once per galaxy)*:
-
-**`/findstationconfig galaxy <GALAXYNAME>`**
-
+The mod tries to auto-detect the configuration when first search is executed in a galaxy.
+If the auto-configuration fails, you must execute `/findstationconfig` and configure the name of the galaxy *(this has only to be done once per galaxy)*:  
+**`/findstationconfig galaxy <GALAXYNAME>`**  
 *Example:*  
 `/findstationconfig galaxy myfirstgalaxy`
 
 If you want to use the search UI, you must enable it first by using:  
-**`/findstationui`**
-
+**`/findstationui`**  
 If you want to hide/disable the UI and remove or uninstall the script, then use:  
 **`/findstationui disable`**
 
 
 ### First use in galaxy (dedicated server with "--datapath"):
-If you use the `--datapath` parameter for your server, you must execute `/findstationconfig` and configure the directory path of the galaxy *(this has only to be done once per galaxy)*. Just use the same path as for `--datapath` plus the galaxy name:
-
-**`/findstationconfig galaxypath <GALAXYPATH>`**
-
+The mod tries to auto-detect the configuration when first search is executed in a galaxy.
+If the auto-configuration fails, and you use the `--datapath` parameter for your server, you must execute `/findstationconfig` and configure the directory path of the galaxy *(this has only to be done once per galaxy)*. Just use the same path as for `--datapath` plus the galaxy name:  
+**`/findstationconfig galaxypath <GALAXYPATH>`**  
 *Example:*  
 `/findstationconfig galaxypath C:\avorionserver\galaxies\myfirstgalaxy`
 
@@ -113,8 +112,19 @@ __*maxresults*__:
 - default: 30
 
 
+### Search modes:
+The available search modes define which sectors are searched for stations:
+
+__*searchmode*__:   
+- defines the search mode to be used for all searches
+- possible values: 
+    - `player` *(search only in sectors discovered by player)*
+    - `galaxy` *(search in all sectors created in the galaxy)*
+- default: player
+
+
 ### Advanced server configuration:
-These configs will help server admins to keep impact of searches on server load at a minumum and to prevent flood/spam!
+These configs will help server admins to keep impact of searches on server load at a minumum and to prevent flood/spam:
 
 __*maxconcurrent*__:   
 - defines the maximum number of concurrent searches, meaning how many players can have a search running at the same time
