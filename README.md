@@ -75,9 +75,9 @@ textures\icons\findstation\searchstation.png
 
 # HOW TO
 
-### First use in galaxy:
+### First use in galaxy
 The mod tries to auto-detect the configuration when first search is executed in a galaxy.  
-If the auto-configuration fails, you must execute `/findstationconfig` and configure the name of the galaxy *(this has only to be done once per galaxy)*:  
+If the auto-configuration fails, you must execute `/findstationconfig` and configure the name of the galaxy *(this has only to be done once per galaxy)*.  
 **`/findstationconfig galaxy <GALAXYNAME>`**  
 *Example:*  
 `/findstationconfig galaxy myfirstgalaxy`
@@ -88,16 +88,16 @@ If you want to hide/disable the UI and remove or uninstall the script, then use:
 **`/findstationui disable`**
 
 
-### First use in galaxy (dedicated server with "--datapath"):
+### First use in galaxy (dedicated server with "--datapath")
 The mod tries to auto-detect the configuration when first search is executed in a galaxy.  
-If the auto-configuration fails, and you use the `--datapath` parameter for your server, you must execute `/findstationconfig` and configure the directory path of the galaxy *(this has only to be done once per galaxy)*. Just use the same path as for `--datapath` plus the galaxy name:  
+If the auto-configuration fails, and you use the `--datapath` parameter for your server, you must execute `/findstationconfig` and configure the directory path of the galaxy *(this has only to be done once per galaxy)*. Just use the same path as for `--datapath` plus the galaxy name.  
 **`/findstationconfig galaxypath <GALAXYPATH>`**  
 *Example:*  
 `/findstationconfig galaxypath C:\avorionserver\galaxies\myfirstgalaxy`
 
 
-### Search modes:
-The available search modes define which sectors are searched for stations:
+### Search modes
+The available search modes define which sectors are searched for stations.
 
 __*searchmode*__:   
 - defines the search mode to be used for all searches
@@ -107,8 +107,8 @@ __*searchmode*__:
 - default: player
 
 
-### Performance tweaking:
-If your searches are too slow or performance cost of searches is too high then you can modify some of the configs to tune the behavior (use `/findstationconfig` for this):
+### Performance tweaking
+If your searches are too slow or performance cost of searches is too high then you can modify some of the configs to tune the behavior (use `/findstationconfig` for this).
 
 __*framesectorloads*__:   
 - defines the maximum number of searched/loaded sector files per frame (quite like "file reads per frame")
@@ -123,8 +123,8 @@ __*maxresults*__:
 - default: 30
 
 
-### Advanced server configuration:
-These configs will help server admins to keep impact of searches on server load at a minumum and to prevent flood/spam:
+### Advanced server configuration
+These configs will help server admins to keep impact of searches on server load at a minumum and to prevent flood/spam.
 
 __*maxconcurrent*__:   
 - defines the maximum number of concurrent searches, meaning how many players can have a search running at the same time
