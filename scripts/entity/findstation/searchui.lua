@@ -383,12 +383,21 @@ function executeSearch(playerindex, term)
 		
 	-- get current configuration 
 	myconfig = Config.getCurrent()
+
 	if not myconfig.galaxypath or myconfig.galaxypath == "" then
-		scriptLog(Player(), "ERROR -> no galaxypath configured!")
-		invokeClientFunction(Player(myplayerindex), "refreshUIInfo", term, "Error: no galaxy/galaxypath is configured!", "error")
-		return
+		-- try to get servers currently loaded galaxy by looking at its command line
+		local gpath = getServerGalaxyPath()
+		if gpath then
+			-- save path to galaxy files if auto-detection was successful 
+			Config.saveValue("galaxypath", gpath)
+			myconfig.galaxypath = gpath
+		else
+			scriptLog(player, "ERROR -> no galaxypath configured and auto-config failed!")
+			invokeClientFunction(Player(myplayerindex), "refreshUIInfo", term, "Error: no galaxy/galaxypath configured and auto-config failed!", "error")
+			return
+		end	
 	end
-	
+
 	-- obey max concurrent searches limit if set
 	if myconfig.maxconcurrent > 0 then
 		local searches = getConcurrentSearchesCount()
@@ -414,8 +423,8 @@ function executeSearch(playerindex, term)
 	end
 
 	-- start of search
-	scriptLog(Player(), "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | galaxypath: %s",
-			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.galaxypath)
+	scriptLog(Player(), "START SEARCH -> searchterm: %s | framesectorloads: %s | maxresults: %s | searchmode: %s | galaxypath: %s",
+			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.searchmode, myconfig.galaxypath)
 			
 	-- search current sector via API first (to get entity indices)
 	resultsLocal = searchCurrentSectorStations(term)
@@ -432,8 +441,14 @@ function executeSearch(playerindex, term)
 		debugLog("getExistingSectors() time: %s ms", (systemTimeMs() - calltime))
 	else
 		-- get coords for all player discovered sectors by parsing the player-dat file
-		sectors = getPlayerKnownLocations(myconfig.galaxypath, Player(), startsector)
-		debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
+		sectors, err = getPlayerKnownLocations(myconfig.galaxypath, Player(), startsector)
+		if err then
+			scriptLog(player, "ERROR on parsing player known locations -> %s", err)
+			invokeClientFunction(Player(myplayerindex), "refreshUIInfo", term, "Error: could not retrieve player known locations!", "error")
+			return
+		else
+			debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
+		end		
 	end
 	
 	-- init frame-based search in sectors

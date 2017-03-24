@@ -16,7 +16,6 @@ require "utility"
 require "stringutility"
 
 require "findstation.common"
-
 Config = require("findstation.config")
 SectorsSearch = require("findstation.sectorssearch")
 
@@ -65,10 +64,19 @@ function executeSearch(term)
 
 	-- get current configuration 
 	myconfig = Config.getCurrent()
+
 	if not myconfig.galaxypath or myconfig.galaxypath == "" then
-		scriptLog(player, "ERROR -> no galaxypath configured!")
-		player:sendChatMessage("findstation", 0, "No galaxy or galaxypath configured. Execute command /findstationconfig first!")
-		return
+		-- try to get servers currently loaded galaxy by looking at its command line
+		local gpath = getServerGalaxyPath()
+		if gpath then
+			-- save path to galaxy files if auto-detection was successful 
+			Config.saveValue("galaxypath", gpath)
+			myconfig.galaxypath = gpath
+		else
+			scriptLog(player, "ERROR -> no galaxypath configured and auto-config failed!")
+			player:sendChatMessage("findstation", 0, "No galaxy/galaxypath configured and auto-config failed. Please use command /findstationconfig")
+			return
+		end	
 	end
 	
 	-- obey max concurrent searches limit if set
@@ -96,8 +104,8 @@ function executeSearch(term)
 	end
 
 	-- start of search
-	scriptLog(player, "START SEARCH -> searchterm: %s | sectorloads: %s | maxresults: %s | galaxypath: %s",
-			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.galaxypath)
+	scriptLog(player, "START SEARCH -> searchterm: %s | framesectorloads: %s | maxresults: %s | searchmode: %s | galaxypath: %s",
+			term, myconfig.framesectorloads, myconfig.maxresults, myconfig.searchmode, myconfig.galaxypath)
 	player:sendChatMessage("findstation", 0, "Searching for '%s' in known stations...", term)
 	
 	-- get players current sector
@@ -112,8 +120,14 @@ function executeSearch(term)
 		debugLog("getExistingSectors() time: %s ms", (systemTimeMs() - calltime))
 	else
 		-- get coords for all player discovered sectors by parsing the player-dat file
-		sectors = getPlayerKnownLocations(myconfig.galaxypath, player)
-		debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
+		sectors, err = getPlayerKnownLocations(myconfig.galaxypath, player)
+		if err then
+			scriptLog(player, "ERROR on parsing player known locations -> %s", err)
+			player:sendChatMessage("findstation", 0, "Error: could not retrieve player known locations!")
+			return
+		else
+			debugLog("getPlayerKnownLocations() time: %s ms", (systemTimeMs() - calltime))
+		end		
 	end
 	
 	-- init frame-based search in sectors

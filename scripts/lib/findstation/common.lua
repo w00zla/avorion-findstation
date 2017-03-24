@@ -26,7 +26,7 @@ fs_debugoutput = true
 
 local modInfo = {
 	name = "findstation",
-	version = "0.5a",
+	version = "0.6a",
 	author = "w00zla"
 }
 
@@ -163,7 +163,7 @@ function scandir(directory, pattern)
 		cmd = "ls " .. path
     end
 	
-	debugLog("scandir cmd: %s", cmd)
+	debugLog("scandir() -> cmd: %s", cmd)
     local pfile = popen(cmd)
     for filename in pfile:lines() do
 		i = i + 1
@@ -461,7 +461,7 @@ end
 function getPlayerKnownLocations(galaxypath, player, coords)
 
 	-- build path to player's data file
-	local datafilepath = galaxypath .. string.format("players\\player_%i.dat", player.index)
+	local datafilepath = galaxypath .. string.format("players/player_%i.dat", player.index)
 	debugLog("datafilepath: %s", datafilepath)
 	
 	local f, err = io.open(datafilepath, "rb")
@@ -541,5 +541,55 @@ function bytes_to_int(str, endian, signed)
         n = (n > 2^(#t*8-1) -1) and (n - 2^(#t*8)) or n -- if last bit set, negative.
     end
     return n
+	
+end
+
+
+function getServerGalaxyPath()
+	
+	local cmd, galaxypath, found
+	local BinaryFormat = string.sub(package.cpath,-3)
+	
+	-- get commandline of running avorion server process  
+    if BinaryFormat == "dll" then
+		-- WINDOWS: needs PowerShell and WMI installed, hopefully this works on most modern windozes
+		cmd = 'powershell -command "Get-WmiObject Win32_Process -Filter \\"name = \'AvorionServer.exe\'\\" | ForEach { $_.CommandLine }"'
+    else
+		-- LINUX: standard ps commmand, hopefully parameters work for all distros this way
+		cmd = "ps -fC AvorionServer"
+    end
+	debugLog("getServerGalaxyPath() -> cmd: %s", cmd)
+	
+	local pfile = io.popen(cmd)
+    for l in pfile:lines() do
+		-- parse command line info for server parameters
+		debugLog("getServerGalaxyPath() -> %s", l)
+		local cgn = string.match(l, "%-%-galaxy%-name%s([^%s%c]+)")
+		if cgn then
+			if found then
+				-- if more than one instance is found, abort
+				-- (since dont know how to differentiate between instances yet)
+				debugLog("getServerGalaxyPath() -> multiple server instances found, cannot determine datapath", cmd)
+				return nil
+			else						
+				local datapath 
+				-- check if the "--datapath" parameter is defined or if using default directory
+				local cdp = string.match(l, "%-%-datapath%s([^%s%c]+)")	
+				if cdp then
+					datapath = cdp
+					if not string.ends(datapath, "/") then
+						datapath = datapath .. "/"				
+					end
+				else
+					datapath = getDefaultDataPath()
+				end
+				galaxypath = datapath .. cgn .. "/"
+				found = true
+			end
+		end
+    end	
+    pfile:close()
+	
+	return galaxypath
 	
 end
