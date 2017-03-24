@@ -96,6 +96,17 @@ If the auto-configuration fails, and you use the `--datapath` parameter for your
 `/findstationconfig galaxypath C:\avorionserver\galaxies\myfirstgalaxy`
 
 
+### Search modes:
+The available search modes define which sectors are searched for stations:
+
+__*searchmode*__:   
+- defines the search mode to be used for all searches
+- possible values: 
+    - `player` *(search only in sectors discovered by player)*
+    - `galaxy` *(search in all sectors created in the galaxy)*
+- default: player
+
+
 ### Performance tweaking:
 If your searches are too slow or performance cost of searches is too high then you can modify some of the configs to tune the behavior (use `/findstationconfig` for this):
 
@@ -110,17 +121,6 @@ __*maxresults*__:
 - lower values means faster search in some cases, but also gives you less output obviously
 - possible values: 0 - 99999999 *(0 disables the limit)*
 - default: 30
-
-
-### Search modes:
-The available search modes define which sectors are searched for stations:
-
-__*searchmode*__:   
-- defines the search mode to be used for all searches
-- possible values: 
-    - `player` *(search only in sectors discovered by player)*
-    - `galaxy` *(search in all sectors created in the galaxy)*
-- default: player
 
 
 ### Advanced server configuration:
