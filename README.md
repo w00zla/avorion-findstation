@@ -1,5 +1,8 @@
 # findstation
 
+![compatibility-beta](https://img.shields.io/badge/avorion-0.11.0.7844--beta-blue.svg)  
+![compatibility-stable](https://img.shields.io/badge/avorion-0.11.0.7783--stable-blue.svg)
+   
 I found a way to read the sector XML files in an usable way within Avorion ingame scripts :)
 
 This means i managed to create a mod which can be used to **search for specific stations in every found/created sector in your galaxy!**
