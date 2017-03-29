@@ -1,7 +1,7 @@
 # findstation
 
-![compatibility-beta](https://img.shields.io/badge/avorion-0.11.0.7844--beta-blue.svg)  
-![compatibility-stable](https://img.shields.io/badge/avorion-0.11.0.7783--stable-blue.svg)
+![compatibility-beta](https://img.shields.io/badge/avorion--beta-v0.11.0.7844-blue.svg)  
+![compatibility-stable](https://img.shields.io/badge/avorion--stable-v0.11.0.7783-blue.svg)
    
 I found a way to read the sector XML files in an usable way within Avorion ingame scripts :)
 
