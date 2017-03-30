@@ -1,4 +1,4 @@
-# findstation
+# FindStation
 
 I found a way to read the sector XML files in an usable way within Avorion ingame scripts :)
 
@@ -67,6 +67,9 @@ Download the ZIP file of the **[latest release](https://github.com/w00zla/avorio
 Following files have to be available on the **client** for multiplayer games:
 ```
 scripts\entity\findstation\searchui.lua
+scripts\lib\findstation\common.lua
+scripts\lib\findstation\config.lua
+scripts\lib\findstation\sectorssearch.lua
 textures\icons\findstation\searchstation.png
 ```
 

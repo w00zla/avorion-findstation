@@ -18,11 +18,13 @@ local defaults = {
 	maxchatresults = 18,
 	maxconcurrent = 0,
 	searchdelay = 0,
-	searchmode = "player"
+	searchmode = "player",
+	debugoutput = false
 }
 
 
 local configprefix = "findstation_"
+local debugoutput = nil
 local Config = {}
 
 
@@ -61,6 +63,21 @@ function Config.getCurrent()
 	
 	return cfg
 end
+
+
+function Config.debugoutput()
+
+	if debugoutput == nil then
+		debugoutput = Config.loadValue("debugoutput")
+	end	
+	return debugoutput
+
+end
+
+
+-- if Config.loadValue("debugoutput") then
+-- 	Config.debugoutput = Config.loadValue("debugoutput")
+-- end
 
 
 return Config

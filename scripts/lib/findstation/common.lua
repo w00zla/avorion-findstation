@@ -10,18 +10,15 @@ desc: general library script for findstation commands
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-require("utility")
+require("utility") 
 require("stringutility")
 
-require("findstation.config")
+Config = require("findstation.config")
 
 -- globals
 fs_searchcmd = "findstation/searchcmd.lua"
 fs_uiloader = "findstation/uiloader.lua"
 fs_searchui = "findstation/searchui.lua"
-
--- DEBUG
-fs_debugoutput = true
 
 
 local modInfo = {
@@ -310,7 +307,7 @@ end
 
 function debugLog(msg, ...)
 
-	if fs_debugoutput and msg and msg ~= "" then
+	if Config.debugoutput() and msg and msg ~= "" then
 		local pinfo = ""
 		local player = Player()
 		if player then pinfo = " p#" .. tostring(player.index) end

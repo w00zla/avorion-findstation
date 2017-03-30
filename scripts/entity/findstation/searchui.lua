@@ -10,11 +10,10 @@ desc: entity script providing a GUI window for search
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-require ("utility")
+require "utility"
 require "stringutility"
 
 require "findstation.common"
-
 Config = require("findstation.config")
 SectorsSearch = require("findstation.sectorssearch")
 

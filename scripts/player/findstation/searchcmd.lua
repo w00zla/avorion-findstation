@@ -133,9 +133,6 @@ function executeSearch(term)
 	-- init frame-based search in sectors
 	secsearch = SectorsSearch(myconfig.galaxypath)
 	secsearch:initBatchProcessing(term, sectors, myconfig.framesectorloads, myconfig.maxresults, startsector)
-
-	--debugLog("sectors table (sorted):")
-	--if fs_debugoutput then printTable(secsearch.sectors) end
 	
 	-- add concurrent search info
 	if myconfig.maxconcurrent and myconfig.maxconcurrent > 0 then
